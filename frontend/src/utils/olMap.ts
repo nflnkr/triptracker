@@ -20,6 +20,24 @@ interface MapOptions {
     disableInteraction?: boolean;
 }
 
+export const maxZoomLevel = {
+    "openstreetmap": 19,
+    "thunderforest-cycle": 22,
+    "thunderforest-landscape": 22,
+    "thunderforest-atlas": 22,
+    "thunderforest-neighbourhood": 22,
+    "thunderforest-outdoors": 22,
+} as const;
+
+export const mapStyles = {
+    "OSM": "openstreetmap",
+    "Opencyclemap": "thunderforest-cycle",
+    "Landscape": "thunderforest-landscape",
+    "Atlas": "thunderforest-atlas",
+    "Neighbourhood": "thunderforest-neighbourhood",
+    "Outdoors": "thunderforest-outdoors",
+} as const;
+
 export function createOlMap({ center = [0, 0], zoom = 2, disableInteraction = false }: MapOptions): Map {
     geographicCoordinates();
 
@@ -52,7 +70,6 @@ export function createOlMap({ center = [0, 0], zoom = 2, disableInteraction = fa
             maxZoom: 22,
         }),
         layers: [tileLayer],
-        // controls: [],
         controls: [
             new ScaleLine({
                 units: "metric"
@@ -88,12 +105,7 @@ export function drawTrack({
     isSelected = false
 }: DrawTrackProps) {
     const line = track.trackpoints.map(trackpoint => [trackpoint.lon, trackpoint.lat]);
-    let style: StyleLike;
-    // if (!showStartEndMarkers) {
-    // style = getEditingTrackStyleFunction(track.color);
-    // } else {
-    style = isSelected ? getSelectedTrackStyle(track.color) : getNonSelectedTrackStyle(track.color);
-    // }
+    const style: StyleLike = isSelected ? getSelectedTrackStyle(track.color) : getNonSelectedTrackStyle(track.color);
     const linestring = new LineString(line);
 
     if (showStartEndMarkers) {

@@ -12,21 +12,12 @@ import Fill from "ol/style/Fill";
 import Text from "ol/style/Text";
 import { FormControl, MenuItem, Paper, Select, SelectChangeEvent } from "@mui/material";
 import { Draw, Modify } from "ol/interaction";
-import { createOlMap, dispatchModifiedPlaces, drawTrack } from "../utils/olMap";
+import { createOlMap, dispatchModifiedPlaces, drawTrack, mapStyles, maxZoomLevel } from "../utils/olMap";
 import { Extent, extend, createEmpty, getCenter, buffer, boundingExtent } from "ol/extent";
 import { TripReducerAction } from "../reducers/trip";
 import { getCountStyle, placeMarkerStyle } from "../utils/olStyles";
 import { ModifyEvent } from "ol/interaction/Modify";
 import { Coordinate } from "ol/coordinate";
-
-const maxZoomLevel = {
-    "openstreetmap": 19,
-    "thunderforest-cycle": 22,
-    "thunderforest-landscape": 22,
-    "thunderforest-atlas": 22,
-    "thunderforest-neighbourhood": 22,
-    "thunderforest-outdoors": 22,
-} as const;
 
 interface MapContainerProps {
     height: string;
@@ -45,15 +36,6 @@ const MapContainer = styled.div.attrs<MapContainerProps>(props => ({
     overflow: hidden;
     border-radius: 4px;
 `;
-
-const mapStyles = {
-    "OSM": "openstreetmap",
-    "Opencyclemap": "thunderforest-cycle",
-    "Landscape": "thunderforest-landscape",
-    "Atlas": "thunderforest-atlas",
-    "Neighbourhood": "thunderforest-neighbourhood",
-    "Outdoors": "thunderforest-outdoors",
-} as const;
 
 interface Props {
     places?: PointOfInterest[] | null;

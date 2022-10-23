@@ -1,4 +1,5 @@
 import express, { Request, Response, NextFunction } from "express";
+import path from "path";
 import bodyParser from "body-parser";
 import config from "./config/config";
 import userRouter from "./routes/user";
@@ -22,7 +23,7 @@ declare module "express-serve-static-core" {
             passport: {
                 user: string;
             };
-        }
+        };
     }
 }
 
@@ -64,7 +65,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(express.json({limit: "50mb"}));
+app.use(express.json({ limit: "50mb" }));
 
 app.use((req, res, next) => {
     res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
@@ -74,6 +75,8 @@ app.use((req, res, next) => {
     }
     next();
 });
+
+app.use(express.static(path.join(process.cwd(), "build")));
 
 app.use("/api/user", authController.checkAuthenticated, userRouter);
 app.use("/api/auth", formDataParser, authRouter);
@@ -88,7 +91,7 @@ app.get("/api/isAuthenticated", (req, res, next) => {
         user: req.user,
         session: req.session
     });
-})
+});
 
 app.post("/api/dropall", async (req, res, next) => {
     try {
@@ -102,6 +105,10 @@ app.post("/api/dropall", async (req, res, next) => {
     } catch (error) {
         res.status(200).json({ error });
     }
+});
+
+app.get('/*', (req, res) => {
+    res.sendFile(path.join(process.cwd(), 'build', 'index.html'));
 });
 
 app.use((error: any, req: Request, res: Response, next: NextFunction) => {

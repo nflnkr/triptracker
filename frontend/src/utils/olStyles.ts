@@ -7,6 +7,8 @@ import Stroke from "ol/style/Stroke";
 import Style, { StyleFunction } from "ol/style/Style";
 import Text from "ol/style/Text";
 
+// TODO cache objects with same parameters instead of creating new on every function call
+
 const trackLineWidth = 3;
 
 const markerStrokeStyle = new Stroke({
@@ -130,7 +132,7 @@ export const getCountStyle: StyleFunction = function (feature: FeatureLike) {
             })
         }),
     }));
-    geometry.forEachSegment(function (start, end) {
+    geometry.forEachSegment((start, end) => {
         styles.push(
             new Style({
                 geometry: new Point(end),

@@ -1,12 +1,10 @@
 import { Container, CssBaseline, ThemeProvider } from "@mui/material";
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Dashboard from "./pages/Trips";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Navbar from "./components/Navbar";
 import Register from "./pages/Register";
-// import Trip from "./pages/Trip";
 import { UserContext } from "./contexts/user";
 import { User } from "./types/models";
 import theme from "./contexts/muiTheme";
@@ -41,7 +39,7 @@ export default function App() {
                 <BrowserRouter>
                     <CssBaseline />
                     <Navbar />
-                    <Container maxWidth={false} sx={{ pt: 2 }}>
+                    <Container maxWidth={false} sx={{ pt: 2 }} component="main" >
                         <Suspense fallback={<PageLoading />}>
                             <Routes>
                                 <Route path="/" element={<Landing />} />

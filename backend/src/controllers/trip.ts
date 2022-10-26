@@ -93,7 +93,7 @@ async function getTripById(req: Request, res: Response, next: NextFunction) {
             name: trip.name,
             tracks: tracks.sort((a, b) => a.trackpoints[0].time - b.trackpoints[0].time),
         };
-        return res.status(200).json({ trip: tripObject });
+        return res.status(200).json({ success: true, trip: tripObject });
     } catch (error) {
         return res.status(500).json({ error });
     }

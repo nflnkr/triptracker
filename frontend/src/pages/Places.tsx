@@ -6,11 +6,13 @@ import {
     List,
     ListItem,
     Paper,
-    TextField} from "@mui/material";
+    TextField
+} from "@mui/material";
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import OlMapPlaces from "../components/OlMapPlaces";
 import PlacelistItem from "../components/PlacelistItem";
-import placesReducer from "../reducers/places";
+import { useAppDispatch, useAppSelector } from "../redux/hooks";
+import { addPlace, removePlace, setPlaces } from "../redux/placesSlice";
 import { PointOfInterest } from "../types/models";
 
 const initialNewPlace: PointOfInterest = {
@@ -26,7 +28,8 @@ type CreatingPlaceStatus = "idle" | "adding" | "added" | "sending";
 
 // TODO place categories
 export default function Places() {
-    const [places, dispatchPlaces] = useReducer(placesReducer, null);
+    const places = useAppSelector(state => state.places);
+    const dispatch = useAppDispatch();
     const [selectedPlaceIndex, setSelectedPlaceIndex] = useState<number | null>(null);
     const [creatingPlaceStatus, setCreatingPlaceStatus] = useState<CreatingPlaceStatus>("idle");
     const [newPlace, setNewPlace] = useState<PointOfInterest>(initialNewPlace);
@@ -35,14 +38,14 @@ export default function Places() {
         try {
             const response = await fetch("/api/places/", { credentials: "include", signal: abortController?.signal });
             const result = await response.json();
-            const places = result.places;
+            const places = result.places as PointOfInterest[];
 
-            dispatchPlaces({ type: "set", payload: { places: places.length ? places : null } });
+            dispatch(setPlaces(places));
             setSelectedPlaceIndex(0);
         } catch (error) {
             console.log("Error setting places", error);
         }
-    }, []);
+    }, [dispatch]);
 
     useEffect(function getPlaces() {
         if (!fetchPlaces) return;
@@ -72,10 +75,7 @@ export default function Places() {
             const result = await response.json();
             if (result.success) {
                 setCreatingPlaceStatus("idle");
-                dispatchPlaces({
-                    type: "add",
-                    payload: { newPlace: result.place }
-                });
+                dispatch(addPlace(result.place as PointOfInterest));
             } else {
                 setCreatingPlaceStatus("idle");
             }
@@ -89,7 +89,7 @@ export default function Places() {
         setNewPlace(prevPlace => ({ ...prevPlace, name: "", description: "" }));
     }
 
-    async function handleDeletePlace(placeId: string, index: number) {
+    const handleDeletePlace = useCallback(async (placeId: string, index: number) => {
         try {
             const response = await fetch("/api/places/" + placeId, {
                 method: "delete",
@@ -97,17 +97,14 @@ export default function Places() {
             });
             const result = await response.json();
             if (result.success) {
-                dispatchPlaces({
-                    type: "delete",
-                    payload: { index }
-                });
+                dispatch(removePlace(placeId));
             } else {
                 console.log("Place delete failed", result);
             }
         } catch (error) {
             console.log("Place delete failed", error);
         }
-    }
+    }, [dispatch]);
 
     const placesList = useMemo(() => {
         if (!places?.length) return;
@@ -124,7 +121,7 @@ export default function Places() {
                     </ListItem>
                 ))}
             </List>);
-    }, [places, selectedPlaceIndex]);
+    }, [handleDeletePlace, places, selectedPlaceIndex]);
 
     return (
         <Container maxWidth="xl">
@@ -132,7 +129,6 @@ export default function Places() {
                 <Box sx={{ display: "flex", flexDirection: "column", gap: 1, minWidth: "21em", flexGrow: 1, width: "21em" }}>
                     <Paper elevation={3} sx={{ width: "100%" }} >
                         <OlMapPlaces
-                            places={places}
                             selectedPlaceIndex={selectedPlaceIndex}
                             isDraw={creatingPlaceStatus === "adding"}
                             handleDrawEnd={handleDrawEnd}

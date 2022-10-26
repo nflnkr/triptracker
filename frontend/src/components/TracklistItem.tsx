@@ -11,8 +11,12 @@ import { CardHeader, Checkbox, Divider, FormControl, MenuItem, Select, SelectCha
 import { OverridableComponent } from "@mui/material/OverridableComponent";
 import { trackTypeIcons } from "../utils/trackTypeIcons";
 import { formatDuration, intervalToDuration } from "date-fns";
+import { useAppDispatch } from "../redux/hooks";
+import { changeTrackType } from "../redux/tripsSlice";
 
 interface Props {
+    tripId: string;
+    trackIndex: number;
     track: ProcessedTrack;
     selected?: boolean;
     onClick: () => void;
@@ -20,13 +24,12 @@ interface Props {
     shown?: boolean;
 }
 
-export default function TracklistItem({ track, selected = false, onClick, editing = false, shown = true }: Props) {
-    const [trackType, setTrackType] = useState<TrackType>(track.type);
+export default function TracklistItem({ tripId, trackIndex, track, selected = false, onClick, editing = false, shown = true }: Props) {
+    const dispatch = useAppDispatch();
 
     function handleTrackTypeChange(event: SelectChangeEvent) {
         const newTrackType = event.target.value as TrackType;
-        track.type = newTrackType;
-        setTrackType(newTrackType);
+        dispatch(changeTrackType({ tripId, trackIndex, newTrackType }));
     }
 
     const IconElement = trackTypeIcons[track.type];
@@ -53,7 +56,7 @@ export default function TracklistItem({ track, selected = false, onClick, editin
                             <ListItem sx={{ py: 0 }}>
                                 <FormControl size="small">
                                     <Select
-                                        value={trackType}
+                                        value={track.type}
                                         onChange={handleTrackTypeChange}
                                         displayEmpty
                                     >

@@ -1,17 +1,12 @@
 import { Link as RouterLink } from "react-router-dom";
-import { Box, Button, Card, CardActionArea, CardActions, CardContent, CardMedia, List, ListItem, ListItemText, Skeleton, useTheme } from "@mui/material";
-import { ProcessedTrip, Trip } from "../types/models";
-import { useContext, useEffect, useState } from "react";
-import { createOlMap } from "../utils/olMap";
-import { Map } from "ol";
-import OlMap from "./OlMap";
+import { Box, Button, Card, CardActionArea, CardActions, CardContent, CardMedia, List, ListItem, ListItemText } from "@mui/material";
+import { useMemo } from "react";
 import DeleteIcon from "@mui/icons-material/Delete";
-import EditIcon from "@mui/icons-material/Edit";
-import { UserContext } from "../contexts/user";
-import { processTrip } from "../utils/trackDataCalcs";
 import OlMapPreview from "./OlMapPreview";
 import { trackTypeIcons } from "../utils/trackTypeIcons";
 import ArrowRightIcon from "@mui/icons-material/ArrowRight";
+import { useAppDispatch, useAppSelector } from "../redux/hooks";
+import { deleteTrips } from "../redux/tripsSlice";
 
 interface Props {
     tripId: string;
@@ -19,23 +14,9 @@ interface Props {
 }
 
 export default function TripCard({ tripId, height }: Props) {
-    const theme = useTheme();
-    const { user, setUser } = useContext(UserContext);
-    const [trip, setTrip] = useState<ProcessedTrip | null>(null);
-
-    useEffect(() => {
-        const controller = new AbortController();
-        fetch("/api/trip/" + tripId, { credentials: "include", signal: controller.signal })
-            .then(result => result.json())
-            .then(json => {
-                setTrip(processTrip(json.trip));
-            }).catch(error => {
-                console.log("Error fetching trip", error);
-            });
-        return () => {
-            controller.abort();
-        };
-    }, [tripId]);
+    const trips = useAppSelector(state => state.trips);
+    const trip = useMemo(() => trips.find(trip => trip._id === tripId), [tripId, trips]);
+    const dispatch = useAppDispatch();
 
     async function handleTripDelete() {
         // TODO handle errors
@@ -45,11 +26,7 @@ export default function TripCard({ tripId, height }: Props) {
         });
         const json = await result.json();
         if (json.success) {
-            setUser(prevUser => ({
-                username: prevUser!.username,
-                trips: prevUser!.trips.filter(trip => trip._id !== tripId),
-                places: prevUser!.places
-            }));
+            dispatch(deleteTrips([tripId]));
         } else {
             console.log("Trip delete failed", json);
         }

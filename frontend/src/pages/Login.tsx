@@ -11,7 +11,8 @@ import {
 } from "@mui/material";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import { useContext, useEffect, useState } from "react";
-import { UserContext } from "../contexts/user";
+import { useAppDispatch, useAppSelector } from "../redux/hooks";
+import { setUser } from "../redux/userSlice";
 
 interface Values {
     username: string;
@@ -21,10 +22,12 @@ interface Values {
 type PasswordState = undefined | "error" | "success";
 
 export default function Login() {
-    const { user, setUser } = useContext(UserContext);
-    const isLoggedIn = Boolean(user);
+    const user = useAppSelector(state => state.user);
+    const dispatch = useAppDispatch();
     const [passwordState, setPasswordState] = useState<PasswordState>(undefined);
     const navigate = useNavigate();
+
+    const isLoggedIn = Boolean(user);
     const formik = useFormik<Values>({
         initialValues: {
             username: "",
@@ -44,7 +47,7 @@ export default function Login() {
             const json = await result.json();
             console.log("Result json: ", json);
             if (json.success === true) {
-                setUser(json.user);
+                dispatch(setUser(json.user))
                 setPasswordState("success");
                 setTimeout(() => navigate("/trips"), 1000);
             } else {

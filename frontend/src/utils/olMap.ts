@@ -11,8 +11,9 @@ import { ATTRIBUTION } from "ol/source/OSM";
 import { getCountStyle, getEditingTrackStyleFunction, getEndMarkerStyle, getNonSelectedTrackStyle, getSelectedTrackStyle, getStartMarkerStyle } from "./olStyles";
 import { StyleLike } from "ol/style/Style";
 import { ModifyEvent } from "ol/interaction/Modify";
-import { TripReducerAction } from "../reducers/trip";
-import { PlacesReducerAction } from "../reducers/places";
+import { AppDispatch } from "../redux/store";
+import { changePlace } from "../redux/placesSlice";
+import { setTrackPoints } from "../redux/tripsSlice";
 
 interface MapOptions {
     center?: number[];
@@ -102,10 +103,10 @@ export function drawTrack({
     trackIndex,
     showStartEndMarkers = true,
     showText = false,
-    isSelected = false
+    isSelected = false,
 }: DrawTrackProps) {
     const line = track.trackpoints.map(trackpoint => [trackpoint.lon, trackpoint.lat]);
-    const style: StyleLike = isSelected ? getSelectedTrackStyle(track.color) : getNonSelectedTrackStyle(track.color);
+    let style: StyleLike = isSelected ? getSelectedTrackStyle(track.color) : getNonSelectedTrackStyle(track.color);
     const linestring = new LineString(line);
 
     if (showStartEndMarkers) {
@@ -128,45 +129,44 @@ export function drawTrack({
     return trackFeature;
 }
 
-// TODO dispatch trip instead of mutating
-export function dispatchModifiedTrip(tracks: ProcessedTrack[], dispatchTrip: React.Dispatch<TripReducerAction>, event: ModifyEvent) {
+export function dispatchModifiedTrip(tripId: string, tracks: ProcessedTrack[], dispatch: AppDispatch, event: ModifyEvent) {
     const modifiedTrackFeature = event.features.getArray().find(feature => {
         const id = feature.getId();
         if (!id) return false;
         return /track_\d+/.test(id.toString());
     });
     if (!modifiedTrackFeature) throw new Error("Modified track id not found");
-    const trackId = Number(modifiedTrackFeature.getId()?.toString().split("_")[1]);
-    if (isNaN(trackId)) throw new Error("Cannot get feature id");
+    const trackIndex = Number(modifiedTrackFeature.getId()?.toString().split("_")[1]);
+    if (isNaN(trackIndex)) throw new Error("Cannot get feature id");
     const points = (modifiedTrackFeature.getGeometry() as LineString).getCoordinates();
-    const trackpoints = tracks[trackId].trackpoints;
+    const newTrackPoints = tracks[trackIndex].trackpoints.map(trackpoint => ({ ...trackpoint }));
 
-    const changeIndex = trackpoints.findIndex((trkpt, index) => {
+    const changeIndex = newTrackPoints.findIndex((trkpt, index) => {
         if (trkpt.lon !== points[index][0] || trkpt.lat !== points[index][1]) return true;
         return false;
     });
     if (changeIndex === -1) throw new Error("Cannot find index of modified point");
 
-    // mutating trackpoint object on purpose
-    if (trackpoints.length === points.length) {
-        trackpoints[changeIndex].lon = points[changeIndex][0];
-        trackpoints[changeIndex].lat = points[changeIndex][1];
-    } else if (trackpoints.length > points.length) {
-        trackpoints.splice(changeIndex, 1);
+    if (newTrackPoints.length === points.length) {
+        newTrackPoints[changeIndex].lon = points[changeIndex][0];
+        newTrackPoints[changeIndex].lat = points[changeIndex][1];
+    } else if (newTrackPoints.length > points.length) {
+        newTrackPoints.splice(changeIndex, 1);
     } else {
         const newTrackpoint: ProcessedTrackPoint = {
             lon: points[changeIndex][0],
             lat: points[changeIndex][1],
-            time: trackpoints[changeIndex - 1].time * 0.5 + trackpoints[changeIndex].time * 0.5,
-            ele: trackpoints[changeIndex - 1].ele * 0.5 + trackpoints[changeIndex].ele * 0.5,
-            accumulateDistance: trackpoints[changeIndex - 1].time * 0.5 + trackpoints[changeIndex].accumulateDistance * 0.5,
+            time: newTrackPoints[changeIndex - 1].time * 0.5 + newTrackPoints[changeIndex].time * 0.5,
+            ele: newTrackPoints[changeIndex - 1].ele * 0.5 + newTrackPoints[changeIndex].ele * 0.5,
+            accumulateDistance: newTrackPoints[changeIndex - 1].time * 0.5 + newTrackPoints[changeIndex].accumulateDistance * 0.5,
             speed: 0,
         };
-        trackpoints.splice(changeIndex, 0, newTrackpoint);
+        newTrackPoints.splice(changeIndex, 0, newTrackpoint);
     }
+    dispatch(setTrackPoints({ tripId, trackIndex, newTrackPoints }));
 }
 
-export function dispatchModifiedPlaces(places: PointOfInterest[], dispatchPlaces: React.Dispatch<PlacesReducerAction>, event: ModifyEvent) {
+export function dispatchModifiedPlaces(places: PointOfInterest[], dispatch: AppDispatch, event: ModifyEvent) {
     const modifiedPlaceFeature = event.features.getArray().find(feature => {
         const id = feature.getId();
         if (!id) return false;
@@ -181,5 +181,5 @@ export function dispatchModifiedPlaces(places: PointOfInterest[], dispatchPlaces
         lon: newCoordinates[0],
         lat: newCoordinates[1],
     };
-    dispatchPlaces({ type: "change", payload: { index, newPlace } });
+    dispatch(changePlace({ id: places[index].id, newPlace }));
 }

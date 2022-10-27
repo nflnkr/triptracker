@@ -1,5 +1,5 @@
 import { array, object, string, SchemaOf, number, mixed } from "yup";
-import { Track, TrackPoint, TrackType, trackTypes, Trip, TripMeta, User } from "./models";
+import { PointOfInterest, Track, TrackPoint, TrackType, trackTypes, Trip, TripMeta, User } from "./models";
 
 const trackPointSchema: SchemaOf<TrackPoint> = object({
     lat: number().defined(),
@@ -25,8 +25,17 @@ const tripMetaSchema: SchemaOf<TripMeta> = object({
     name: string().defined(),
 }).strict(true).noUnknown();
 
-/* const userSchema: SchemaOf<User> = object({
+export const placeSchema: SchemaOf<PointOfInterest> = object({
+    name: string().optional(),
+    description: string().optional(),
+    lat: number().defined(),
+    lon: number().defined(),
+    id: string().optional(),
+    createdAt: number().optional(),
+}).strict(true).noUnknown();
+
+const userSchema: SchemaOf<User> = object({
     username: string().defined(),
     trips: array().of(tripMetaSchema).defined(),
-    places: array().of
-}).strict(true).noUnknown(); */
+    places: array().of(placeSchema).defined(),
+}).strict(true).noUnknown();

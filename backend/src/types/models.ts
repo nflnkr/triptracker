@@ -41,10 +41,10 @@ export interface User {
 }
 
 export interface PointOfInterest {
-    id: string;
+    id?: string;
     lat: number;
     lon: number;
     name?: string;
     description?: string;
-    createdAt: number;
+    createdAt?: number;
 }

@@ -3,6 +3,8 @@ import mongoose from "mongoose";
 import PlaceModel, { Place } from "./place";
 import TripModel, { Trip } from "./trip";
 
+
+// TODO move hooks functionality to dbcontrollers
 @pre<User>('remove', async function () {
     try {
         const trips = await TripModel.find({ author: this._id }).exec();
@@ -19,7 +21,7 @@ import TripModel, { Trip } from "./trip";
 })
 @modelOptions({ options: { allowMixed: Severity.ERROR }, schemaOptions: { timestamps: true } })
 export class User {
-    @prop({ required: true, unique: true })
+    @prop({ required: true })
     public username!: string;
     
     @prop({ required: true, ref: () => Trip })

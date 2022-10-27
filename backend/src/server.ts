@@ -15,7 +15,7 @@ import initializePassport from "./config/passport";
 import authController from "./controllers/auth";
 import tileRouter from "./routes/tile";
 import multer from "multer";
-import cors from "cors";
+import { errorHandler } from "./utils/errorHandler";
 
 declare module "express-serve-static-core" {
     interface Request {
@@ -46,12 +46,6 @@ const store = new MongoDBStore({
 store.on("error", error => {
     console.log("Error on MongoDBStore", error);
 });
-
-/* app.use(cors({
-    origin: "http://localhost:3000",
-    methods: ["POST", "PUT", "GET", "OPTIONS", "HEAD", "DELETE"],
-    credentials: true,
-})); */
 
 app.use(session({
     secret: config.server.sessionSecret,
@@ -111,9 +105,7 @@ app.get('/*', (req, res) => {
     res.sendFile(path.join(process.cwd(), 'build', 'index.html'));
 });
 
-app.use((error: any, req: Request, res: Response, next: NextFunction) => {
-    return res.status(404).json({ error: error.message });
-});
+app.use(errorHandler);
 
 app.listen(
     config.server.port,

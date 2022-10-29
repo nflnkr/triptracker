@@ -8,7 +8,7 @@ async function createTrip(req: Request, res: Response, next: NextFunction) {
     const userId = req.session.passport.user;
     let tripObject = req.body.trip as Trip;
     try {
-        tripDbController.create(await userDbController.get(userId), tripObject);
+        await tripDbController.create(await userDbController.get(userId), tripObject);
         return res.status(201).json({ success: true });
     } catch (error) {
         return res.status(500).json({ error });
@@ -18,7 +18,7 @@ async function createTrip(req: Request, res: Response, next: NextFunction) {
 async function getTripsByUsername(req: Request, res: Response, next: NextFunction) {
     const userId = req.session.passport.user;
     try {
-        const trips = tripDbController.getAllByUserId(userId);
+        const trips = await tripDbController.getAllByUserId(userId);
         if (!trips) throw new TripNotFoundError();
 
         return res.status(200).json({ trips });
@@ -30,7 +30,7 @@ async function getTripsByUsername(req: Request, res: Response, next: NextFunctio
 async function getTripById(req: Request, res: Response, next: NextFunction) {
     const tripId = req.params.tripId;
     try {
-        const trip = tripDbController.get(tripId);
+        const trip = await tripDbController.get(tripId);
         return res.status(200).json({ success: true, trip });
     } catch (error) {
         return res.status(500).json({ error });
@@ -41,7 +41,7 @@ async function updateTripById(req: Request, res: Response, next: NextFunction) {
     const tripId = req.params.tripId;
     let updatedTrip = req.body.trip as Trip;
     try {
-        tripDbController.update(tripId, updatedTrip);
+        await tripDbController.update(tripId, updatedTrip);
         return res.status(200).json({ success: true });
     } catch (error) {
         return res.status(500).json({ error });
@@ -52,7 +52,7 @@ async function deleteTripById(req: Request, res: Response, next: NextFunction) {
     const userId = req.session.passport.user;
     const tripId = req.params.tripId;
     try {
-        tripDbController.delete(userDbController.get(userId), tripId);
+        await tripDbController.delete(userDbController.get(userId), tripId);
         return res.status(200).json({ success: true });
     } catch (error) {
         return res.status(500).json({ error });

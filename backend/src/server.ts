@@ -16,6 +16,7 @@ import authController from "./controllers/auth";
 import tileRouter from "./routes/tile";
 import multer from "multer";
 import { errorHandler } from "./utils/errorHandler";
+import { logger } from "./utils/logger";
 
 declare module "express-serve-static-core" {
     interface Request {
@@ -71,6 +72,8 @@ app.use((req, res, next) => {
 });
 
 app.use(express.static(path.join(process.cwd(), "build")));
+
+app.use(logger.requestLogger.bind(logger));
 
 app.use("/api/user", authController.checkAuthenticated, userRouter);
 app.use("/api/auth", formDataParser, authRouter);

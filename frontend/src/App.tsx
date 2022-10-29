@@ -1,11 +1,11 @@
 import { Container, CssBaseline, ThemeProvider } from "@mui/material";
-import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Navbar from "./components/Navbar";
 import Register from "./pages/Register";
-import { PointOfInterest, Trip } from "./types/models";
+import { Trip } from "./types/models";
 import theme from "./contexts/muiTheme";
 import CreateTrip from "./pages/CreateTrip";
 import NotFound from "./pages/NotFound";
@@ -16,7 +16,6 @@ import { useAppDispatch, useAppSelector } from "./redux/hooks";
 import { setUser } from "./redux/userSlice";
 import { processTrip } from "./utils/trackDataCalcs";
 import { setTrips } from "./redux/tripsSlice";
-import { setPlaces } from "./redux/placesSlice";
 
 const TripPage = lazy(() => import("./pages/Trip"));
 
@@ -25,25 +24,25 @@ export default function App() {
     const dispatch = useAppDispatch();
 
     useEffect(() => {
+        const controller = new AbortController();
         // TODO handle errors
-        fetch("/api/user", { credentials: "include" })
+        fetch("/api/user", { credentials: "include", signal: controller.signal })
             .then(result => result.json())
             .then(json => {
                 if (json.user) dispatch(setUser(json.user));
+            }).catch(err => {
+                console.log("fetch error", err);
             });
-        fetch("/api/trip", { credentials: "include" })
+        fetch("/api/trip", { credentials: "include", signal: controller.signal })
             .then(result => result.json())
             .then(json => {
                 const trips = json.trips as Trip[];
                 const processedTrips = trips.map(trip => processTrip(trip));
                 dispatch(setTrips(processedTrips));
+            }).catch(err => {
+                console.log("fetch error", err);
             });
-        fetch("/api/places", { credentials: "include" })
-            .then(result => result.json())
-            .then(json => {
-                const places = json.places as PointOfInterest[];
-                dispatch(setPlaces(places));
-            });
+        return () => controller.abort();
     }, [dispatch]);
 
     return (

@@ -10,7 +10,7 @@ import config from "../config/config";
 
 
 class MongoDbController<T extends AnyParamConstructor<any>> {
-    protected model: ReturnModelType<T, BeAnObject>;
+    protected readonly model: ReturnModelType<T, BeAnObject>;
 
     constructor(mongooseModel: ReturnModelType<T, BeAnObject>) {
         this.model = mongooseModel;
@@ -47,7 +47,7 @@ export class UserDbController<T extends AnyParamConstructor<any>> extends MongoD
 }
 
 export class TripDbController<T extends AnyParamConstructor<any>, K extends AnyParamConstructor<any>, U extends AnyParamConstructor<any>> extends MongoDbController<T> {
-    private trackDbController: TrackDbController<K>;
+    private readonly trackDbController: TrackDbController<K>;
 
     constructor(tripModel: ReturnModelType<T, BeAnObject>, trackModel: ReturnModelType<K, BeAnObject>) {
         super(tripModel);

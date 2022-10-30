@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from "express";
-import UserModel from "../models/user";
 import bcrypt from "bcrypt";
 import passport from "passport";
+import { userDbController } from "./mongodb";
+
 
 async function register(req: Request, res: Response, next: NextFunction) {
     const { username, password } = req.body;
@@ -10,18 +11,12 @@ async function register(req: Request, res: Response, next: NextFunction) {
     if (!password || !/^\w{8,25}$/.test(password)) return res.status(500).json({ error: "Password doesnt match the requirements" });
 
     try {
-        const user = await UserModel.findOne({ username }).exec();
-        if (user !== null) return res.status(500).json({ error: "Username already taken" });
         const hashedPassword = await bcrypt.hash(password, 10);
-        const newUser = new UserModel({
-            username,
-            password: hashedPassword,
-            trips: []
-        });
-        await newUser.save();
+        const result = await userDbController.create(username, hashedPassword)
+        if (!result) return res.status(500).json({ error: "Username already taken" });
         res.status(201).json({ success: true });
     } catch (error) {
-        res.status(201).json({ error });
+        res.status(500).json({ error });
     }
 }
 

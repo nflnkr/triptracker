@@ -10,7 +10,7 @@ import {
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import { useNavigate } from "react-router-dom";
 import { useContext, useEffect } from "react";
-import { UserContext } from "../contexts/user";
+import { useAppSelector } from "../redux/hooks";
 
 interface Values {
     username: string;
@@ -18,9 +18,10 @@ interface Values {
 }
 
 export default function SignIn() {
-    const { user } = useContext(UserContext);
-    const isLoggedIn = Boolean(user);
+    const user = useAppSelector(state => state.user);
     const navigate = useNavigate();
+
+    const isLoggedIn = Boolean(user);
     const formik = useFormik<Values>({
         initialValues: {
             username: "",

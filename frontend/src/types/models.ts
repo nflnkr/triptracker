@@ -32,13 +32,10 @@ export interface Trip {
     tracks: Track[];
 }
 
-export type TripMeta = Omit<Trip, "tracks"> & {
-    _id: string;
-};
-
 export interface User {
+    _id: string;
     username: string;
-    trips: TripMeta[];
+    trips: Trip[];
     places: PointOfInterest[];
 }
 
@@ -67,7 +64,6 @@ export interface ProcessedTrack extends Track {
 export interface ProcessedTrackPoint extends TrackPoint {
     accumulateDistance: number;
     speed: number;
-    chartIndex?: number;
 }
 
 export interface PointOfInterest {

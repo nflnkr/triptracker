@@ -53,6 +53,7 @@ export function movingAverage(points: ChartPoint[], spanSize: number): ChartPoin
 }
 
 // TODO geodata filtering
+// TODO refactor
 export function processTrip(trip: Trip) {
     const processedTrip = trip as ProcessedTrip;
     processedTrip.startDate = Infinity;
@@ -102,6 +103,8 @@ export function processTrip(trip: Trip) {
         processedTrip.totalDistance! += trackTotalDistance;
     });
 
+    processedTrip.tracks.sort((a, b) => a.startDate - b.startDate);
+
     return processedTrip;
 }
 
@@ -113,7 +116,6 @@ export function getChartData(track: ProcessedTrack, yAxis: "speed" | "elevation"
     switch (chartType) {
         case "speed/time":
             trackpoints.forEach((trackpoint, index) => {
-                trackpoint.chartIndex = index;
                 chartPoints.push({
                     x: trackpoint.time,
                     y: +(trackpoint.speed * 3.6).toFixed(1)
@@ -122,10 +124,8 @@ export function getChartData(track: ProcessedTrack, yAxis: "speed" | "elevation"
             break;
         case "speed/distance":
             for (let i = 0, j = 0; i < trackpoints.length; i++) {
-                trackpoints[i].chartIndex = undefined;
                 if (trackpoints[i].accumulateDistance > currentAccumDistance) {
                     currentAccumDistance = trackpoints[i].accumulateDistance;
-                    trackpoints[i].chartIndex = j++;
                     chartPoints.push({
                         x: Math.floor(currentAccumDistance),
                         y: +(trackpoints[i].speed * 3.6).toFixed(1)
@@ -135,7 +135,6 @@ export function getChartData(track: ProcessedTrack, yAxis: "speed" | "elevation"
             break;
         case "elevation/time":
             trackpoints.forEach((trackpoint, index) => {
-                trackpoint.chartIndex = index;
                 chartPoints.push({
                     x: trackpoint.time,
                     y: +trackpoint.ele.toFixed(1)
@@ -144,10 +143,8 @@ export function getChartData(track: ProcessedTrack, yAxis: "speed" | "elevation"
             break;
         case "elevation/distance":
             for (let i = 0, j = 0; i < trackpoints.length; i++) {
-                trackpoints[i].chartIndex = undefined;
                 if (trackpoints[i].accumulateDistance > currentAccumDistance) {
                     currentAccumDistance = trackpoints[i].accumulateDistance;
-                    trackpoints[i].chartIndex = j++;
                     chartPoints.push({
                         x: Math.floor(currentAccumDistance),
                         y: +trackpoints[i].ele.toFixed(1)
@@ -180,13 +177,6 @@ export function calcEndDate(tracks: ProcessedTrack[]) {
     return time;
 }
 
-export function getIndexesOfTrue(arr: boolean[]) {
-    return arr.reduce((acc, isShown, index) => {
-        if (isShown) acc.push(index);
-        return acc;
-    }, [] as number[]);
-}
-
 export function approximateIntermediatePoint(trkpt1: ProcessedTrackPoint, trkpt2: ProcessedTrackPoint, progress: number): ProcessedTrackPoint {
     const distanceFromLastPoint = distanceBetweenTwoPoints(trkpt1.lat, trkpt1.lon, trkpt2.lat, trkpt2.lon);
     const deltaTimeFromLastPointInMs = trkpt2.time - trkpt1.time;
@@ -214,13 +204,13 @@ export function toRawTrip(trip: ProcessedTrip): Trip {
                 ele: trackpoint.ele,
                 time: trackpoint.time
             });
-        })
+        });
         rawTracks.push({
             type: track.type,
             color: track.color,
             trackpoints: rawTrackpoints
         });
-    })
+    });
     const rawTrip: Trip = {
         _id: trip._id,
         name: trip.name,

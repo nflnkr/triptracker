@@ -15,19 +15,21 @@ import {
     Typography,
     MenuItem
 } from "@mui/material";
-import { UserContext } from "../contexts/user";
 import { deepOrange, deepPurple } from "@mui/material/colors";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
 import AddIcon from "@mui/icons-material/Add";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
+import { setUser } from "../redux/userSlice";
+import { useAppDispatch, useAppSelector } from "../redux/hooks";
 
 const LogoContainer = styled.img`
     height: 46px;
     padding: 4px;
-`
+`;
 
 export default function Navbar() {
-    const { user, setUser } = useContext(UserContext);
+    const user = useAppSelector(state => state.user);
+    const dispatch = useAppDispatch();
     const [anchorElUser, setAnchorElUser] = React.useState<null | HTMLElement>(null);
     const navigate = useNavigate();
 
@@ -44,7 +46,7 @@ export default function Navbar() {
         fetch("/api/auth/logout", { method: "post", credentials: "include" })
             .then(result => result.json())
             .then(json => console.log("logout response: ", json));
-        setUser(null);
+        dispatch(setUser(null));
         navigate("/");
     }
 
@@ -110,5 +112,5 @@ export default function Navbar() {
                 }
             </Toolbar>
         </AppBar>
-    )
+    );
 }

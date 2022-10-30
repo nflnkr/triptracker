@@ -12,20 +12,11 @@ import Fill from "ol/style/Fill";
 import Text from "ol/style/Text";
 import { FormControl, MenuItem, Paper, Select, SelectChangeEvent } from "@mui/material";
 import { Modify } from "ol/interaction";
-import { createOlMap, dispatchModifiedTrip, drawTrack } from "../utils/olMap";
+import { createOlMap, dispatchModifiedTrip, drawTrack, mapStyles, maxZoomLevel } from "../utils/olMap";
 import { Extent, extend, createEmpty, getCenter, buffer } from "ol/extent";
-import { TripReducerAction } from "../reducers/trip";
 import { getCountStyle, placeMarkerStyle } from "../utils/olStyles";
 import { ModifyEvent } from "ol/interaction/Modify";
-
-const maxZoomLevel = {
-    "openstreetmap": 19,
-    "thunderforest-cycle": 22,
-    "thunderforest-landscape": 22,
-    "thunderforest-atlas": 22,
-    "thunderforest-neighbourhood": 22,
-    "thunderforest-outdoors": 22,
-} as const;
+import { useAppDispatch } from "../redux/hooks";
 
 interface MapContainerProps {
     height: string;
@@ -45,16 +36,8 @@ const MapContainer = styled.div.attrs<MapContainerProps>(props => ({
     border-radius: 4px;
 `;
 
-const mapStyles = {
-    "OSM": "openstreetmap",
-    "Opencyclemap": "thunderforest-cycle",
-    "Landscape": "thunderforest-landscape",
-    "Atlas": "thunderforest-atlas",
-    "Neighbourhood": "thunderforest-neighbourhood",
-    "Outdoors": "thunderforest-outdoors",
-} as const;
-
 interface Props {
+    tripId?: string;
     tracks?: ProcessedTrack[];
     highlightPoint?: ProcessedTrackPoint | null;
     followPoint?: boolean;
@@ -62,9 +45,9 @@ interface Props {
     width?: string;
     showControls?: boolean;
     isModify?: boolean;
-    dispatchTrip?: React.Dispatch<TripReducerAction>;
     disableInteraction?: boolean;
     selectedTrackIndex?: number | null;
+    shownTracks: number[];
 }
 
 const LOGGING = false;
@@ -72,6 +55,7 @@ const LOGGING = false;
 // TODO colored elevation/speed
 // TODO add retina support
 export default function OlMap({
+    tripId,
     tracks,
     highlightPoint,
     followPoint = false,
@@ -79,10 +63,11 @@ export default function OlMap({
     width = "100%",
     showControls = true,
     isModify = false,
-    dispatchTrip,
     disableInteraction = false,
     selectedTrackIndex,
+    shownTracks
 }: Props) {
+    const dispatch = useAppDispatch();
     const mapRef = useRef<Map | null>(null);
     const [mapStyle, setMapStyle] = useState<keyof typeof mapStyles>("OSM");
     const mapElementRef = useRef<HTMLDivElement>(null);
@@ -125,6 +110,8 @@ export default function OlMap({
 
         let combinedExtent: Extent = createEmpty();
         tracks.forEach((track, index) => {
+            if (!shownTracks.includes(index)) return;
+
             const feature = drawTrack({
                 tracksSource,
                 markersSource,
@@ -137,7 +124,7 @@ export default function OlMap({
             if (geometry) extend(combinedExtent, geometry.getExtent());
         });
 
-        if (!isCenteredRef.current) {
+        if (!isCenteredRef.current && shownTracks.length) {
             mapRef.current.getView().fit(combinedExtent);
             isCenteredRef.current = true;
         }
@@ -146,17 +133,17 @@ export default function OlMap({
             tracksSource.clear();
             markersSource.clear();
         };
-    }, [tracks, isModify, selectedTrackIndex]);
+    }, [tracks, isModify, selectedTrackIndex, shownTracks]);
 
     useEffect(function toggleModify() {
-        if (!mapRef.current || !isModify || !modifyInteractionRef.current || !dispatchTrip) return;
+        if (!mapRef.current || !isModify || !modifyInteractionRef.current) return;
 
         const modifyInteraction = modifyInteractionRef.current;
 
         function modifyEventHandler(event: ModifyEvent) {
-            if (!tracks || !tracks.length || !dispatchTrip) return;
+            if (!tracks || !tracks.length || !tripId) return;
 
-            dispatchModifiedTrip(tracks, dispatchTrip, event);
+            dispatchModifiedTrip(tripId, tracks, dispatch, event);
         }
 
         modifyInteraction.on("modifyend", modifyEventHandler);
@@ -167,7 +154,7 @@ export default function OlMap({
             modifyInteraction.un("modifyend", modifyEventHandler);
             mapRef.current?.removeInteraction(modifyInteraction);
         };
-    }, [dispatchTrip, isModify, tracks]);
+    }, [dispatch, isModify, tracks, tripId]);
 
     useEffect(function drawFollowPoint() {
         if (!mapRef.current || !pointsVectorSourceRef.current) return;

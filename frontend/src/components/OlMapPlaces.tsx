@@ -1,32 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Feature, Map, View } from "ol";
+import { Feature, Map } from "ol";
 import styled from "styled-components/macro";
-import { PointOfInterest, ProcessedTrack, ProcessedTrackPoint } from "../types/models";
 import { Vector as VectorSource, XYZ } from "ol/source";
 import { Vector as VectorLayer } from "ol/layer";
-import { LineString, Point } from "ol/geom";
-import Stroke from "ol/style/Stroke";
-import Style from "ol/style/Style";
-import Circle from "ol/style/Circle";
-import Fill from "ol/style/Fill";
-import Text from "ol/style/Text";
+import { Point } from "ol/geom";
 import { FormControl, MenuItem, Paper, Select, SelectChangeEvent } from "@mui/material";
 import { Draw, Modify } from "ol/interaction";
-import { createOlMap, dispatchModifiedPlaces, drawTrack } from "../utils/olMap";
-import { Extent, extend, createEmpty, getCenter, buffer, boundingExtent } from "ol/extent";
-import { TripReducerAction } from "../reducers/trip";
-import { getCountStyle, placeMarkerStyle } from "../utils/olStyles";
+import { createOlMap, dispatchModifiedPlaces, mapStyles, maxZoomLevel } from "../utils/olMap";
+import { boundingExtent } from "ol/extent";
+import { placeMarkerStyle } from "../utils/olStyles";
 import { ModifyEvent } from "ol/interaction/Modify";
 import { Coordinate } from "ol/coordinate";
-
-const maxZoomLevel = {
-    "openstreetmap": 19,
-    "thunderforest-cycle": 22,
-    "thunderforest-landscape": 22,
-    "thunderforest-atlas": 22,
-    "thunderforest-neighbourhood": 22,
-    "thunderforest-outdoors": 22,
-} as const;
+import { useAppDispatch, useAppSelector } from "../redux/hooks";
 
 interface MapContainerProps {
     height: string;
@@ -46,40 +31,30 @@ const MapContainer = styled.div.attrs<MapContainerProps>(props => ({
     border-radius: 4px;
 `;
 
-const mapStyles = {
-    "OSM": "openstreetmap",
-    "Opencyclemap": "thunderforest-cycle",
-    "Landscape": "thunderforest-landscape",
-    "Atlas": "thunderforest-atlas",
-    "Neighbourhood": "thunderforest-neighbourhood",
-    "Outdoors": "thunderforest-outdoors",
-} as const;
-
 interface Props {
-    places?: PointOfInterest[] | null;
     selectedPlaceIndex?: number | null;
     height?: string;
     width?: string;
     isModify?: boolean;
     isDraw?: boolean;
     showControls?: boolean;
-    dispatchPlaces?: any;
     handleDrawEnd?: (lon: number, lat: number) => void;
 }
 
 // TODO add retina support
 // TODO animation on selected place change
 export default function OlMapPlaces({
-    places,
     selectedPlaceIndex,
     height = "400px",
     width = "100%",
     isModify = false,
     isDraw = false,
     showControls = true,
-    dispatchPlaces,
     handleDrawEnd,
 }: Props) {
+    const places = useAppSelector(state => state.places)
+    const dispatch = useAppDispatch();
+
     const mapRef = useRef<Map | null>(null);
     const [mapStyle, setMapStyle] = useState<keyof typeof mapStyles>("OSM");
     const mapElementRef = useRef<HTMLDivElement>(null);
@@ -104,14 +79,14 @@ export default function OlMapPlaces({
     }, []);
 
     useEffect(function dispatchOnModify() {
-        if (!mapRef.current || !isModify || !modifyInteractionRef.current || !dispatchPlaces) return;
+        if (!mapRef.current || !isModify || !modifyInteractionRef.current) return;
 
         const modifyInteraction = modifyInteractionRef.current;
 
         function modifyEventHandler(event: ModifyEvent) {
-            if (!places || !places.length || !dispatchPlaces) return;
+            if (!places || !places.length) return;
 
-            dispatchModifiedPlaces(places, dispatchPlaces, event);
+            dispatchModifiedPlaces(places, dispatch, event);
         }
 
         modifyInteraction.on("modifyend", modifyEventHandler);
@@ -122,7 +97,7 @@ export default function OlMapPlaces({
             modifyInteraction.un("modifyend", modifyEventHandler);
             mapRef.current?.removeInteraction(modifyInteraction);
         };
-    }, [dispatchPlaces, isModify, places]);
+    }, [dispatch, isModify, places]);
 
     useEffect(function drawInteraction() {
         if (!pointsVectorSourceRef.current || !mapRef.current || !handleDrawEnd || !isDraw) return;

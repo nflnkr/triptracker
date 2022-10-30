@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import TrackModel from "../models/track";
 import TripModel from "../models/trip";
 import UserModel from "../models/user";
-import type { TrackPoint } from "../types/models";
+import type { Track, TrackPoint, Trip } from "../types/models";
 import { getUniqueTrackpoints } from "../utils/getUniqueTrackpoints";
 import { trackpointsToStrings } from "../utils/parseTrackpointString";
 import { xmlTrackpointsFromFile } from "../utils/xmlTrackpointsFromFile";
@@ -23,7 +23,7 @@ async function uploadGpx(req: Request, res: Response, next: NextFunction) {
         const user = await UserModel.findOne({ username }).exec();
         if (user === null) return res.status(404).json({ error: "User not found" });
 
-        const returnTrips = [];
+        const returnTrips: Trip[] = [];
 
         if (sameTrip === "true") {
             const trip = new TripModel({
@@ -32,7 +32,7 @@ async function uploadGpx(req: Request, res: Response, next: NextFunction) {
                 tracks: [],
             });
 
-            const returnTracks: string[] = [];
+            const returnTracks: Track[] = [];
 
             for (let file of files) {
                 const xmlTrackpoints = xmlTrackpointsFromFile(file);
@@ -47,24 +47,31 @@ async function uploadGpx(req: Request, res: Response, next: NextFunction) {
                 });
 
                 trackpoints = getUniqueTrackpoints(trackpoints);
+                const stringTrackpoints = trackpointsToStrings(trackpoints);
 
                 const track = await TrackModel.create({
                     parentTrip: trip._id,
-                    // type: "unknown",
+                    // type: "other",
                     // color: "#535cd4ff",
-                    trackpoints: trackpointsToStrings(trackpoints),
+                    trackpoints: stringTrackpoints,
                 });
 
-                returnTracks.push(track._id);
+                const returnTrack: Track = {
+                    type: "other",
+                    color: "#535cd4ff",
+                    trackpoints: trackpoints
+                };
+
+                returnTracks.push(returnTrack);
 
                 trip.tracks.push(track._id);
             }
 
-            const returnTrip = {
+            const returnTrip: Trip = {
                 _id: trip._id,
                 name: tripname,
                 tracks: returnTracks
-            }
+            };
 
             returnTrips.push(returnTrip);
             user.trips.push(trip._id);
@@ -82,9 +89,9 @@ async function uploadGpx(req: Request, res: Response, next: NextFunction) {
                     if (isNaN(time)) throw new Error(`Cannot parse time: ${trackpoint["time"]}`);
                     return { lat, lon, ele, time };
                 });
-                
+
                 trackpoints = getUniqueTrackpoints(trackpoints);
-                
+
                 const trip = new TripModel({
                     author: user._id,
                     name: files.length > 1 ? `${tripname} ${tripIndex++}` : tripname,
@@ -93,16 +100,20 @@ async function uploadGpx(req: Request, res: Response, next: NextFunction) {
 
                 const track = await TrackModel.create({
                     parentTrip: trip._id,
-                    // type: "unknown",
+                    // type: "other",
                     // color: "#535cd4ff",
                     trackpoints: trackpointsToStrings(trackpoints),
                 });
 
-                const returnTrip = {
+                const returnTrip: Trip = {
                     _id: trip._id,
                     name: tripname,
-                    tracks: [track._id],
-                }
+                    tracks: [{
+                        type: "other",
+                        color: "#535cd4ff",
+                        trackpoints
+                    }],
+                };
 
                 returnTrips.push(returnTrip);
                 trip.tracks.push(track);
@@ -114,7 +125,7 @@ async function uploadGpx(req: Request, res: Response, next: NextFunction) {
 
         res.status(200).json({ success: true, trips: returnTrips });
     } catch (error) {
-        res.status(500).json({ error });
+        next(error);
     }
 }
 
@@ -125,4 +136,4 @@ async function downloadGpx(req: Request, res: Response, next: NextFunction) {
 export default {
     uploadGpx,
     downloadGpx
-}
+};

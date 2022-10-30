@@ -15,15 +15,18 @@ import {
 import { ChangeEvent, useContext, useRef, useState } from "react";
 import SaveIcon from "@mui/icons-material/Save";
 import { LoadingButton } from "@mui/lab";
-import { UserContext } from "../contexts/user";
 import { Link as RouterLink } from "react-router-dom";
+import { useAppDispatch } from "../redux/hooks";
+import { addTrips } from "../redux/tripsSlice";
+import { processTrip } from "../utils/trackDataCalcs";
+import { Trip } from "../types/models";
 
 
 type UploadState = "idle" | "withfiles" | "loading";
 type UploadResult = "error" | "success" | null;
 
 export default function CreateTrip() {
-    const { user, setUser } = useContext(UserContext);
+    const dispatch = useAppDispatch();
     const [tripNameFieldValue, setTripNameFieldValue] = useState<string>("");
     const [uploadState, setUploadState] = useState<UploadState>("idle");
     const [uploadResult, setUploadResult] = useState<UploadResult>(null);
@@ -67,18 +70,13 @@ export default function CreateTrip() {
             });
             const result = await response.json();
             if (result.success) {
+                const trips = result.trips as Trip[];
                 setUploadResult("success");
                 setUploadState("idle");
                 setFiles(null);
-                setUploadedTripId(result.trips[0]._id);
-                setUser(prevUser => {
-                    return ({
-                        username: prevUser!.username,
-                        trips: [...prevUser!.trips, ...result.trips],
-                        places: prevUser!.places
-                    })
-                });
-
+                setUploadedTripId(trips[0]._id);
+                const processedTrips = trips.map(trip => processTrip(trip));
+                dispatch(addTrips(processedTrips));
             } else {
                 console.log(result);
                 setUploadState("idle");
@@ -164,5 +162,5 @@ export default function CreateTrip() {
                 )}
             </List>
         </Container>
-    )
+    );
 }

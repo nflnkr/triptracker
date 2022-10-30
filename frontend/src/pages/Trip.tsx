@@ -22,7 +22,6 @@ import {
 import Paper from "@mui/material/Paper";
 import { useCallback, useContext, useDeferredValue, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { UserContext } from "../contexts/user";
 import type { ProcessedTrackPoint } from "../types/models";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
@@ -48,9 +47,8 @@ import zoomPlugin from "chartjs-plugin-zoom";
 import { Line } from "react-chartjs-2";
 import { ChartJSOrUndefined } from "react-chartjs-2/dist/types";
 import OlMap from "../components/OlMap";
-import tripReducer from "../reducers/trip";
 import { chartjsOptions, verticalLineOnHoverPlugin } from "../utils/chartjs";
-import { approximateIntermediatePoint, getChartData, getIndexesOfTrue, toRawTrip, movingAverage, processTrip } from "../utils/trackDataCalcs";
+import { approximateIntermediatePoint, getChartData, toRawTrip, movingAverage, processTrip } from "../utils/trackDataCalcs";
 import LoadingButton from "@mui/lab/LoadingButton";
 import SaveIcon from "@mui/icons-material/Save";
 import FastRewindIcon from "@mui/icons-material/FastRewind";
@@ -58,6 +56,8 @@ import FastForwardIcon from "@mui/icons-material/FastForward";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import TracklistItem from "../components/TracklistItem";
 import PageLoading from "../components/PageLoading";
+import { useAppDispatch, useAppSelector } from "../redux/hooks";
+import { setTrips, removeTrack, mergeTracks, splitTrack, renameTrip, cropTrack, deleteTrips, setTrip } from "../redux/tripsSlice";
 
 ChartJS.register(
     CategoryScale,
@@ -96,14 +96,16 @@ const initialPlaybackState: PlaybackState = { playing: false, speed: 1 };
 // TODO flex direction column on mobile
 // TODO stop points as circles, text in which indicates stop time
 export default function TripPage() {
-    const { setUser } = useContext(UserContext);
-    const [trip, dispatchTrip] = useReducer(tripReducer, null);
+    const trips = useAppSelector(state => state.trips);
+    const dispatch = useAppDispatch();
+    const tripId = useParams().tripId;
+    const trip = useMemo(() => trips.find(trip => trip._id === tripId), [tripId, trips]);
     const [chartData, setChartData] = useState<ChartData<"line"> | null>(null);
     const [highlightPoint, setHighlightPoint] = useState<ProcessedTrackPoint | null>(null);
     const [followOnChartHover, setFollowOnChartHover] = useState<boolean>(false);
     const [chartType, setChartType] = useState<"time" | "distance">("time");
-    const [shownTracks, setShownTracks] = useState<boolean[]>([]);
-    const [selectedTrackIndex, setSelectedTrackIndex] = useState<number | null>(null);
+    const [shownTracks, setShownTracks] = useState<number[]>([]);
+    const [selectedTrackIndex, setSelectedTrackIndex] = useState<number>(0);
     const [currentTrackProgress, setCurrentTrackProgress] = useState<number | null>(null);
     const [playbackState, setPlaybackState] = useState<PlaybackState>(initialPlaybackState);
     const [tripName, setTripName] = useState<string | null>(null);
@@ -115,37 +117,22 @@ export default function TripPage() {
     const playbackAnimationTimeRef = useRef<number | null>(null);
     const navigate = useNavigate();
     const chartRef = useRef<ChartJSOrUndefined<"line"> & { currentTrackProgress: number; }>(null);
-    const tripId = useParams().tripId;
+    const tripLoadedRef = useRef(false);
     const defferedTrackProgress = useDeferredValue(currentTrackProgress);
-    const selectedTrack = selectedTrackIndex === null || !trip ? null : trip.tracks[selectedTrackIndex];
+    const selectedTrack = trip?.tracks[selectedTrackIndex] || null;
 
     if (chartRef.current && currentTrackProgress !== null) chartRef.current.currentTrackProgress = currentTrackProgress;
 
-    const fetchTrip = useCallback(async function fetchTrip(abortController?: AbortController) {
-        if (!tripId) return;
-        try {
-            const response = await fetch("/api/trip/" + tripId, { credentials: "include", signal: abortController?.signal });
-            const result = await response.json();
-            const trip = processTrip(result.trip);
+    useEffect(function handleNewTrip() {
+        if (!trip?.tracks?.length) return;
 
-            dispatchTrip({ type: "set", payload: { trip } });
-            setShownTracks(Array(trip.tracks.length).fill(true));
-            setSelectedTrackIndex(0);
+        if (!tripLoadedRef.current) {
+            tripLoadedRef.current = true;
+            setShownTracks(trip.tracks.map((track, index) => index));
             setCurrentTrackProgress(trip.tracks[0].startDate);
             setTripName(trip.name);
-        } catch (error) {
-            console.log("Error setting trip", error);
         }
-    }, [tripId]);
-
-    useEffect(function getTrip() {
-        if (!fetchTrip) return;
-
-        const controller = new AbortController();
-        fetchTrip(controller);
-
-        return () => controller.abort();
-    }, [fetchTrip]);
+    }, [trip]);
 
     useEffect(function refreshChartData() {
         if (!trip || !selectedTrack || !trip.tracks.length) return setChartData(null);
@@ -180,7 +167,7 @@ export default function TripPage() {
         setProgressZoomTimeBoundaries([selectedTrack.startDate, selectedTrack.endDate]);
     }, [selectedTrack, trip]);
 
-    useEffect(function refreshShownTracks() {
+    /* useEffect(function refreshShownTracks() {
         if (!trip) return;
 
         setShownTracks(prevShownTracks => {
@@ -191,10 +178,10 @@ export default function TripPage() {
             return newShownTracks;
         });
         if (!trip.tracks.length) {
-            setSelectedTrackIndex(null);
+            setSelectedTrackIndex(0);
             setCurrentTrackProgress(null);
         }
-    }, [trip]);
+    }, [trip]); */
 
     useEffect(function handlePlaybackAnimation() {
         if (!trip || !selectedTrack) return;
@@ -238,11 +225,11 @@ export default function TripPage() {
         }
     }, [defferedTrackProgress, selectedTrack]);
 
-    useEffect(function changeTripName() {
-        if (!tripName) return;
+    /* useEffect(function changeTripName() {
+        if (!tripName || !trip || !tripName) return;
 
-        dispatchTrip({ type: "rename", payload: { name: tripName } });
-    }, [tripName]);
+        dispatch(renameTrip({ tripId: trip._id, tripName }));
+    }, [dispatch, trip, tripName]); */
 
     useEffect(function drawVerticalLineOnChart() {
         if (!chartRef.current || defferedTrackProgress === null) return;
@@ -282,11 +269,8 @@ export default function TripPage() {
     }, [isEditing]);
 
     const handleToggle = (index: number) => () => {
-        setShownTracks(prev => {
-            const newShownTracks = prev.slice();
-            newShownTracks[index] = !prev[index];
-            return newShownTracks;
-        });
+        setShownTracks(prev =>
+            prev.includes(index) ? prev.filter(trackIndex => trackIndex !== index) : [...prev, index].sort((a, b) => a - b));
     };
 
     function chartResetZoom() {
@@ -342,40 +326,32 @@ export default function TripPage() {
         }
     }), [chartType]);
 
-    const shownTracksObjects = useMemo(() => trip?.tracks.filter((track, index) => shownTracks![index]), [shownTracks, trip?.tracks]);
-
     const trackEditButtons = useMemo(() => {
         if (!isEditing) return;
 
         function handleSplitTrack() {
-            if (!highlightPoint || selectedTrackIndex === null) return;
-            dispatchTrip({
-                type: "split",
-                payload: { index: selectedTrackIndex, time: highlightPoint.time }
-            });
+            if (!highlightPoint || !tripId) return;
+
+            dispatch(splitTrack({ tripId, trackIndex: selectedTrackIndex, time: highlightPoint.time }));
         }
 
         function handleMergeSelectedTracks() {
-            dispatchTrip({
-                type: "merge",
-                payload: { indexes: getIndexesOfTrue(shownTracks) }
-            });
-            setSelectedTrackIndex(getIndexesOfTrue(shownTracks)[0]);
+            if (!tripId) return;
+
+            dispatch(mergeTracks({ tripId, trackIndexes: shownTracks }));
+            setSelectedTrackIndex(shownTracks[0]);
         }
 
         function handleDeleteSelectedTracks() {
-            dispatchTrip({
-                type: "delete",
-                payload: { indexes: getIndexesOfTrue(shownTracks) }
-            });
+            if (!tripId) return;
+
+            dispatch(removeTrack({ tripId, trackIndexes: shownTracks }));
         }
 
         function handleCropSelectedTrack() {
-            if (!progressZoomTimeBoundaries || selectedTrackIndex === null) return;
-            dispatchTrip({
-                type: "crop",
-                payload: { index: selectedTrackIndex, start: progressZoomTimeBoundaries[0], end: progressZoomTimeBoundaries[1] }
-            });
+            if (!progressZoomTimeBoundaries || !tripId) return;
+
+            dispatch(cropTrack({ tripId, trackIndex: selectedTrackIndex, start: progressZoomTimeBoundaries[0], end: progressZoomTimeBoundaries[1] }));
         }
 
         function handleDrawTrack() {
@@ -391,7 +367,7 @@ export default function TripPage() {
                 <Button disabled onClick={handleDrawTrack} sx={{ flex: "1 1 40%" }} size="small" variant="contained">Draw</Button>
             </Box>
         );
-    }, [highlightPoint, isEditing, progressZoomTimeBoundaries, selectedTrackIndex, shownTracks]);
+    }, [dispatch, highlightPoint, isEditing, progressZoomTimeBoundaries, selectedTrackIndex, shownTracks, tripId]);
 
     const tripMetadata = useMemo(() => {
         if (!trip) return;
@@ -419,6 +395,7 @@ export default function TripPage() {
         if (!trip) return;
 
         async function handleTripDeleteClick() {
+            if (!tripId) return;
             // TODO handle errors
             try {
                 const response = await fetch("/api/trip/" + tripId, {
@@ -427,11 +404,7 @@ export default function TripPage() {
                 });
                 const result = await response.json();
                 if (result.success) {
-                    setUser(prevUser => ({
-                        username: prevUser!.username,
-                        trips: prevUser!.trips.filter(trip => trip._id !== tripId),
-                        places: prevUser!.places
-                    }));
+                    dispatch(deleteTrips([tripId]));
                     navigate("/trips");
                 } else {
                     // TODO
@@ -447,18 +420,33 @@ export default function TripPage() {
             setTripSaveState(null);
         }
 
-        function handleCancelClick() {
-            dispatchTrip({ type: "set", payload: { trip: null } });
-            fetchTrip();
+        async function handleCancelClick() {
+            if (!tripId) return;
+
             setIsEditing(false);
+            setShownTracks(trip?.tracks.map((track, index) => index) || []);
+            try {
+                const response = await fetch("/api/trip/" + tripId, { credentials: "include" });
+                const result = await response.json();
+                if (result.success) {
+                    dispatch(setTrip({ tripId, trip: processTrip(result.trip) }));
+                } else {
+                    // TODO
+                    console.log("Error fetching trip", result);
+                }
+            } catch (error) {
+                console.log("Error fetching trip", error);
+            }
         }
 
         async function handleSaveClick() {
-            if (!trip) return;
+            if (!trip || !tripId || tripName === null) return;
             // TODO handle errors
             setTripSaveState("sending");
             try {
                 const rawTrip = toRawTrip(trip);
+                rawTrip.name = tripName;
+
                 const response = await fetch("/api/trip/" + tripId, {
                     method: "PATCH",
                     credentials: "include",
@@ -474,6 +462,7 @@ export default function TripPage() {
                     // TODO
                     setTripSaveState("success");
                     setIsEditing(false);
+                    dispatch(renameTrip({ tripId, tripName }));
                 } else {
                     // TODO
                     console.log("Trip save failed", result);
@@ -535,7 +524,7 @@ export default function TripPage() {
                 }
             </Box>
         );
-    }, [fetchTrip, isEditing, navigate, setUser, trip, tripId, tripName, tripSaveState]);
+    }, [dispatch, isEditing, navigate, trip, tripId, tripName, tripSaveState]);
 
     const trackControls = useMemo(() => {
         if (!selectedTrack) return;
@@ -588,18 +577,20 @@ export default function TripPage() {
                         {isEditing &&
                             <Checkbox
                                 edge="start"
-                                checked={shownTracks[index] === undefined ? true : shownTracks[index]}
+                                checked={shownTracks.includes(index)}
                                 onClick={handleToggle(index)}
                                 tabIndex={-1}
                                 disableRipple
                             />
                         }
                         <TracklistItem
+                            tripId={trip._id}
+                            trackIndex={index}
                             editing={isEditing}
                             track={track}
                             selected={index === selectedTrackIndex}
                             onClick={() => setSelectedTrackIndex(index)}
-                            shown={shownTracks[index] === undefined ? true : shownTracks[index]}
+                            shown={shownTracks.includes(index)}
                         />
                     </ListItem>
                 ))}
@@ -616,12 +607,13 @@ export default function TripPage() {
                     <Box sx={{ display: "flex", flexDirection: "column", gap: 1, minWidth: "21em", flexGrow: 1, width: "21em" }}>
                         <Paper elevation={3} >
                             <OlMap
+                                tripId={tripId}
                                 height={`${MAP_HEIGHT}px`}
-                                tracks={shownTracksObjects}
+                                tracks={trip.tracks}
+                                shownTracks={shownTracks}
                                 highlightPoint={highlightPoint}
                                 followPoint={followOnChartHover}
                                 isModify={isEditing}
-                                dispatchTrip={dispatchTrip}
                                 selectedTrackIndex={selectedTrackIndex}
                             />
                         </Paper>

@@ -11,7 +11,7 @@ const tileSourceList = {
     "thunderforest-atlas": `https://tile.thunderforest.com/atlas/{z}/{x}/{y}.png?apikey=${process.env.THUNDERFOREST_API_KEY}`,
     "thunderforest-neighbourhood": `https://tile.thunderforest.com/neighbourhood/{z}/{x}/{y}.png?apikey=${process.env.THUNDERFOREST_API_KEY}`,
     "thunderforest-outdoors": `https://tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=${process.env.THUNDERFOREST_API_KEY}`,
-}
+};
 
 const maxZoomLevel = {
     "openstreetmap": 19,
@@ -20,7 +20,7 @@ const maxZoomLevel = {
     "thunderforest-atlas": 22,
     "thunderforest-neighbourhood": 22,
     "thunderforest-outdoors": 22,
-}
+};
 
 const tilesCachePath = path.join(process.cwd(), "/data/tiles");
 
@@ -69,7 +69,7 @@ async function getTile(req: Request, res: Response, next: NextFunction) {
                 method: "GET",
                 responseType: "arraybuffer",
                 headers: {
-                    "User-Agent":"Axios 0.27.2"
+                    "User-Agent": "Axios 0.27.2"
                 }
             });
             const imageBuffer = response.data;
@@ -79,10 +79,10 @@ async function getTile(req: Request, res: Response, next: NextFunction) {
             cachedTiles[mapStyle].push(fileName);
         }
     } catch (error) {
-        res.status(500).json({ error });
+        next(error);
     }
 }
 
 export default {
     getTile
-}
+};

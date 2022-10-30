@@ -125,7 +125,7 @@ async function uploadGpx(req: Request, res: Response, next: NextFunction) {
 
         res.status(200).json({ success: true, trips: returnTrips });
     } catch (error) {
-        res.status(500).json({ error });
+        next(error);
     }
 }
 

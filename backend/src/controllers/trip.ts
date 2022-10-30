@@ -11,7 +11,7 @@ async function createTrip(req: Request, res: Response, next: NextFunction) {
         await tripDbController.create(await userDbController.get(userId), tripObject);
         return res.status(201).json({ success: true });
     } catch (error) {
-        return res.status(500).json({ error });
+        next(error);
     }
 }
 
@@ -23,7 +23,7 @@ async function getTripsByUsername(req: Request, res: Response, next: NextFunctio
 
         return res.status(200).json({ trips });
     } catch (error) {
-        return res.status(500).json({ error });
+        next(error);
     }
 }
 
@@ -33,7 +33,7 @@ async function getTripById(req: Request, res: Response, next: NextFunction) {
         const trip = await tripDbController.get(tripId);
         return res.status(200).json({ success: true, trip });
     } catch (error) {
-        return res.status(500).json({ error });
+        next(error);
     }
 }
 
@@ -44,7 +44,7 @@ async function updateTripById(req: Request, res: Response, next: NextFunction) {
         await tripDbController.update(tripId, updatedTrip);
         return res.status(200).json({ success: true });
     } catch (error) {
-        return res.status(500).json({ error });
+        next(error);
     }
 }
 
@@ -52,10 +52,10 @@ async function deleteTripById(req: Request, res: Response, next: NextFunction) {
     const userId = req.session.passport.user;
     const tripId = req.params.tripId;
     try {
-        await tripDbController.delete(userDbController.get(userId), tripId);
+        await tripDbController.delete(await userDbController.get(userId), tripId);
         return res.status(200).json({ success: true });
     } catch (error) {
-        return res.status(500).json({ error });
+        next(error);
     }
 }
 

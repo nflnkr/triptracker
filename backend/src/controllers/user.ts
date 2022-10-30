@@ -17,7 +17,7 @@ async function updateUser(req: Request, res: Response, next: NextFunction) {
         // TODO user info change
         return res.status(200).json({ result: "not implemented" });
     } catch (error) {
-        return res.status(500).json({ error });
+        next(error);
     }
 }
 
@@ -26,8 +26,8 @@ async function deleteUserByName(req: Request, res: Response, next: NextFunction)
     try {
         await userDbController.delete(userId);
         res.status(200).json({ success: true });
-    } catch {
-        return res.status(500).json({ success: false });
+    } catch (error) {
+        next(error);
     }
 }
 

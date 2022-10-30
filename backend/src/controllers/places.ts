@@ -11,7 +11,7 @@ async function createPlace(req: Request, res: Response, next: NextFunction) {
         const result = await placeDbController.create(await userDbController.get(userId), place);
         return res.status(201).json({ success: true, place: result });
     } catch (error) {
-        return res.status(500).json({ error });
+        next(error);
     }
 }
 
@@ -21,7 +21,7 @@ async function getPlaces(req: Request, res: Response, next: NextFunction) {
         const returnPlaces = await placeDbController.getAllByUserId(userId);
         return res.status(200).json({ places: returnPlaces });
     } catch (error) {
-        return res.status(500).json({ error });
+        next(error);
     }
 }
 
@@ -36,7 +36,7 @@ async function updatePlace(req: Request, res: Response, next: NextFunction) {
         await placeDbController.update(placeId, updatedPlace);
         return res.status(201).json({ success: true });
     } catch (error) {
-        return res.status(500).json({ error });
+        next(error);
     }
 }
 
@@ -50,7 +50,7 @@ async function deletePlace(req: Request, res: Response, next: NextFunction) {
         await placeDbController.delete(user, placeId);
         return res.status(200).json({ success: true, result: "Place removed" });
     } catch (error) {
-        return res.status(500).json({ error });
+        next(error);
     }
 }
 

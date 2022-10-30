@@ -1,4 +1,4 @@
-import { Container, CssBaseline, ThemeProvider } from "@mui/material";
+import { Box, Container, CssBaseline, ThemeProvider } from "@mui/material";
 import { lazy, Suspense, useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Landing from "./pages/Landing";
@@ -48,22 +48,24 @@ export default function App() {
     return (
         <ThemeProvider theme={theme}>
             <BrowserRouter>
-                <CssBaseline />
-                <Navbar />
-                <Container maxWidth={false} sx={{ pt: 2 }} component="main" >
-                    <Suspense fallback={<PageLoading />}>
-                        <Routes>
-                            <Route path="/" element={<Landing />} />
-                            <Route path="/login" element={<Login />} />
-                            <Route path="/register" element={<Register />} />
-                            {user && <Route path="/trips" element={<Trips />} />}
-                            <Route path="/trip/:tripId" element={<TripPage />} />
-                            {user && <Route path="/places" element={<Places />} />}
-                            {user && <Route path="/create" element={<CreateTrip />} />}
-                            <Route path="*" element={<NotFound />} />
-                        </Routes>
-                    </Suspense>
-                </Container>
+                <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
+                    <CssBaseline />
+                    <Navbar />
+                    <Container maxWidth={false} sx={{ pt: 2, flexGrow: 1 }} component="main" >
+                        <Suspense fallback={<PageLoading />}>
+                            <Routes>
+                                <Route path="/" element={<Landing />} />
+                                <Route path="/login" element={<Login />} />
+                                <Route path="/register" element={<Register />} />
+                                {user && <Route path="/trips" element={<Trips />} />}
+                                <Route path="/trip/:tripId" element={<TripPage />} />
+                                {user && <Route path="/places" element={<Places />} />}
+                                {user && <Route path="/create" element={<CreateTrip />} />}
+                                <Route path="*" element={<NotFound />} />
+                            </Routes>
+                        </Suspense>
+                    </Container>
+                </Box>
             </BrowserRouter>
         </ThemeProvider>
     );

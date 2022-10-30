@@ -1,12 +1,13 @@
 import { Link as RouterLink } from "react-router-dom";
-import { Box, Button, Card, CardActionArea, CardActions, CardContent, CardMedia, List, ListItem, ListItemText } from "@mui/material";
-import { useMemo } from "react";
+import { Box, Button, Card, CardActionArea, CardActions, CardContent, CardMedia, List, ListItem, ListItemText, Skeleton } from "@mui/material";
+import { useMemo, useRef } from "react";
 import DeleteIcon from "@mui/icons-material/Delete";
 import OlMapPreview from "./OlMapPreview";
 import { trackTypeIcons } from "../utils/trackTypeIcons";
 import ArrowRightIcon from "@mui/icons-material/ArrowRight";
 import { useAppDispatch, useAppSelector } from "../redux/hooks";
 import { deleteTrips } from "../redux/tripsSlice";
+import { useIntersectionObserver } from "../utils/hooks";
 
 interface Props {
     tripId: string;
@@ -17,6 +18,9 @@ export default function TripCard({ tripId, height }: Props) {
     const trips = useAppSelector(state => state.trips);
     const trip = useMemo(() => trips.find(trip => trip._id === tripId), [tripId, trips]);
     const dispatch = useAppDispatch();
+    const cardRef = useRef<HTMLDivElement | null>(null);
+    const entry = useIntersectionObserver(cardRef, { rootMargin: "500px" });
+    const isVisible = !!entry?.isIntersecting;
 
     async function handleTripDelete() {
         // TODO handle errors
@@ -32,18 +36,19 @@ export default function TripCard({ tripId, height }: Props) {
         }
     }
 
-    const trackTypeSequence = trip?.tracks.flatMap((track, index, arr) => {
+    const trackTypeSequence = useMemo(() => trip?.tracks.flatMap((track, index, arr) => {
         const Icon = trackTypeIcons[track.type];
         if (index !== arr.length - 1) return [
             <Icon key={`${trip.startDate}${track.startDate}`} />,
             <ArrowRightIcon key={`${trip.startDate}${track.startDate}_arrow`} />
         ];
         return <Icon key={`${trip.startDate}${track.startDate}`} />;
-    });
+    }), [trip?.startDate, trip?.tracks]);
 
     return (
-        <Card elevation={1} sx={{ width: "100%" }} >
+        <Card elevation={1} sx={{ width: "100%" }} ref={cardRef} >
             {trip &&
+                isVisible ?
                 <>
                     <CardActionArea component={RouterLink} to={`/trip/${tripId}`} sx={{ display: "flex", alignItems: "flex-start" }} >
                         <CardMedia sx={{ flexGrow: 1 }}>
@@ -90,7 +95,26 @@ export default function TripCard({ tripId, height }: Props) {
                         </Box>
                     </CardActions>
                 </>
+                :
+                <TripCardSkeleton height={height + 46} />
             }
         </Card>
+    );
+}
+
+function TripCardSkeleton({ height }: { height: number; }) {
+    return (
+        <Box sx={{ width: "100%", height, display: "flex", padding: 2, gap: 2 }}>
+            <Box sx={{ flexGrow: 3 }} >
+                <Skeleton height={height - 32} variant="rectangular" />
+            </Box>
+            <Box sx={{ flexGrow: 1, display: "flex", flexDirection: "column", gap: 1 }}>
+                <Skeleton variant="text" />
+                <Skeleton variant="text" />
+                <Skeleton variant="text" />
+                <Skeleton variant="text" />
+                <Skeleton variant="text" />
+            </Box>
+        </Box>
     );
 }

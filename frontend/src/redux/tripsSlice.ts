@@ -9,7 +9,7 @@ export const tripsSlice = createSlice({
     initialState,
     reducers: {
         setTrips: (state: ProcessedTrip[], action: PayloadAction<ProcessedTrip[]>) => {
-            return action.payload;
+            return action.payload.sort((t1, t2) => (t2.startDate || 0) - (t1.startDate || 1));
         },
         setTrip: (state: ProcessedTrip[], action: PayloadAction<{ tripId: string; trip: ProcessedTrip; }>) => {
             const tripIndex = state.findIndex(trip => trip._id === action.payload.tripId);
